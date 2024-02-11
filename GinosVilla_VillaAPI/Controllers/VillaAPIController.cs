@@ -1,4 +1,5 @@
 ﻿using GinosVilla_VillaAPI.Data;
+using GinosVilla_VillaAPI.Logging;
 using GinosVilla_VillaAPI.Models;
 using GinosVilla_VillaAPI.Models.Dto;
 using Microsoft.AspNetCore.Http;
@@ -13,10 +14,25 @@ namespace GinosVilla_VillaAPI.Controllers
     [ApiController]
     public class VillaAPIController : ControllerBase
     {
+        // private readonly ILogger<VillaAPIController> _logger { get; }
+
+        // Custom Logger Interface
+        private readonly ILogging _logger;
+        public VillaAPIController(ILogging logger) // ILogger<VillaAPIController> logger this is how we implement build in logger
+        {
+            _logger = logger;
+        }
+
+
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public ActionResult<IEnumerable<VillaDTO>> GetVillas() // 1# Adding ActionResult defines the type that we need to return 
         {
+            //Custom Logger
+            _logger.Log("Getting all villas", "");
+            //_logger.LogInformation("Getting all villas");
+
+
             return Ok(VillaStore.villaList); // 1# When returning the ActionResult we need to say the type that we return for example Ok, NotFound etc
             // return VillaStore.villaList;  
         }
@@ -27,7 +43,6 @@ namespace GinosVilla_VillaAPI.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)] // Shows what the availabe response types that will be produced in order not to show undocumented
         [ProducesResponseType(StatusCodes.Status400BadRequest)] // Shows what the availabe response types that will be produced in order not to show undocumented
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(VillaDTO))] // Shows what the availabe response types that will be produced in order not to show undocumented
-
         // [ProducesResponseType(200, Type = typeof(VillaDTO))] // Shows what the availabe response type of 200 and the type that will be returned  in order not to show undocumented (if you remove the VillaDTO from the function ex public ActionResult GetVilla(int id)
         // [ProducesResponseType(StatusCodes.Status400BadRequest)] // Shows what the availabe response types that will be produced in order not to show undocumented
         // [ProducesResponseType(404)] // Shows what the availabe response types that will be produced in order not to show undocumented
@@ -35,6 +50,10 @@ namespace GinosVilla_VillaAPI.Controllers
         {
             if(id == 0)
             {
+                //Custom Logger
+                _logger.Log("Getting all villas", "error");
+
+                //_logger.LogInformation("Get Villa Error with id " + id);
                 return BadRequest();
             }
 
