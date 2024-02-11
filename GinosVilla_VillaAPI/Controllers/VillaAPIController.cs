@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GinosVilla_VillaAPI.Controllers
 {
@@ -196,7 +197,8 @@ namespace GinosVilla_VillaAPI.Controllers
                 return BadRequest();
             }
 
-            var villa = _db.Villas.FirstOrDefault(x=>x.Id==id);
+            // The AsNoTracking stops the tracking of the ENTITY FRAMEWORK
+            var villa = _db.Villas.AsNoTracking().FirstOrDefault(x=>x.Id==id);
 
             VillaDTO villaDTO = new()
             {
