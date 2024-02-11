@@ -14,13 +14,19 @@ namespace GinosVilla_VillaAPI.Controllers
     [ApiController]
     public class VillaAPIController : ControllerBase
     {
+        private readonly ApplicationDbContext _db;
+
         // private readonly ILogger<VillaAPIController> _logger { get; }
 
         // Custom Logger Interface
-        private readonly ILogging _logger;
-        public VillaAPIController(ILogging logger) // ILogger<VillaAPIController> logger this is how we implement build in logger
+        //private readonly ILogging _logger;
+
+
+        // public VillaAPIController(ILogging logger) Custom Logging DI
+        //  public VillaAPIController(ILogger<VillaAPIController> logger) this is how we implement build in logger
+        public VillaAPIController(ApplicationDbContext db) 
         {
-            _logger = logger;
+            this._db = db;
         }
 
 
@@ -29,11 +35,11 @@ namespace GinosVilla_VillaAPI.Controllers
         public ActionResult<IEnumerable<VillaDTO>> GetVillas() // 1# Adding ActionResult defines the type that we need to return 
         {
             //Custom Logger
-            _logger.Log("Getting all villas", "");
+            //_logger.Log("Getting all villas", "");
             //_logger.LogInformation("Getting all villas");
 
 
-            return Ok(VillaStore.villaList); // 1# When returning the ActionResult we need to say the type that we return for example Ok, NotFound etc
+            return Ok(_db.Villas.ToList()); // 1# When returning the ActionResult we need to say the type that we return for example Ok, NotFound etc
             // return VillaStore.villaList;  
         }
 
@@ -51,14 +57,14 @@ namespace GinosVilla_VillaAPI.Controllers
             if(id == 0)
             {
                 //Custom Logger
-                _logger.Log("Getting all villas", "error");
+                //_logger.Log("Getting all villas", "error");
 
                 //_logger.LogInformation("Get Villa Error with id " + id);
                 return BadRequest();
             }
-
-            var villa = VillaStore.villaList.FirstOrDefault(x => x.Id.Equals(id));
-            if(villa is not VillaDTO) // Equal to villa == null
+                        
+            var villa = _db.Villas.FirstOrDefault(x => x.Id.Equals(id));
+            if (villa is null) // Equal to villa == null
             {
                 return NotFound();
             }
@@ -78,7 +84,8 @@ namespace GinosVilla_VillaAPI.Controllers
 
 
             //Throw custom error model if the name is not uniquie
-            if(VillaStore.villaList.FirstOrDefault(x=>x.Name.ToLower() == villaDTO.Name.ToLower()) != null)
+            
+            if (_db.Villas.FirstOrDefault(x => x.Name.ToLower() == villaDTO.Name.ToLower()) != null)
             {
                 // The custom error message
                 ModelState.AddModelError("CustomError", "Villa Already Exists");
@@ -95,11 +102,21 @@ namespace GinosVilla_VillaAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError); // Example of returning Bad request or not found
             }
 
-            villaDTO.Id = VillaStore.villaList.OrderByDescending(x => x.Id).FirstOrDefault().Id + 1;
+            // Map the new Villa cause it DTO
+            Villa model = new()
+            {
+                Amenity = villaDTO.Amenity,
+                Details = villaDTO.Details,
+                Id = villaDTO.Id,
+                ImageUrl = villaDTO.ImageUrl,
+                Name = villaDTO.Name,
+                Occupancy = villaDTO.Occupancy,
+                Rate = villaDTO.Rate,
+                Sqft = villaDTO.Sqft,
+            };
 
-            // Add to the villa store
-            VillaStore.villaList.Add(villaDTO);
-            
+            _db.Villas.Add(model);
+            _db.SaveChanges();
 
             // Nice to return the route to the new Villa that is created
             // You need to provide the NAME of the route and the parameters that is needed
@@ -119,13 +136,14 @@ namespace GinosVilla_VillaAPI.Controllers
                 return BadRequest();
             }
 
-            var villa = VillaStore.villaList.FirstOrDefault(x=> x.Id == id);
-            if(villa != null)
+            var villa = _db.Villas.FirstOrDefault(x=> x.Id == id);
+            if(villa == null)
             {
                 return NotFound();
             }
 
-            VillaStore.villaList.Remove(villa);
+            _db.Villas.Remove(villa);
+            _db.SaveChanges();
 
             return NoContent();
         }
@@ -141,11 +159,25 @@ namespace GinosVilla_VillaAPI.Controllers
                 return BadRequest();
             }
 
-            var villa = VillaStore.villaList.FirstOrDefault(x=>x.Id == id);
-            villa.Name = villaDTO.Name;
-            villa.Sqft = villaDTO.Sqft;
-            villa.Occupancy = villaDTO.Occupancy;
+            //var villa = VillaStore.villaList.FirstOrDefault(x=>x.Id == id);
+            //villa.Name = villaDTO.Name;
+            //villa.Sqft = villaDTO.Sqft;
+            //villa.Occupancy = villaDTO.Occupancy;
 
+            Villa model = new()
+            {
+                Amenity = villaDTO.Amenity,
+                Details = villaDTO.Details,
+                Id = villaDTO.Id,
+                ImageUrl = villaDTO.ImageUrl,
+                Name = villaDTO.Name,
+                Occupancy = villaDTO.Occupancy,
+                Rate = villaDTO.Rate,
+                Sqft = villaDTO.Sqft,
+            };
+
+            _db.Villas.Update(model);
+            _db.SaveChanges();
 
             return NoContent();
         }
@@ -164,13 +196,46 @@ namespace GinosVilla_VillaAPI.Controllers
                 return BadRequest();
             }
 
-            var villa = VillaStore.villaList.FirstOrDefault(x=>x.Id==id);
-            if(villa == null)
+            var villa = _db.Villas.FirstOrDefault(x=>x.Id==id);
+
+            VillaDTO villaDTO = new()
+            {
+                Amenity = villa.Amenity,
+                Details = villa.Details,
+                Id = villa.Id,
+                ImageUrl = villa.ImageUrl,
+                Name = villa.Name,
+                Occupancy = villa.Occupancy,
+                Rate = villa.Rate,
+                Sqft = villa.Sqft,
+            };
+
+
+
+            if (villa == null)
             {
                 return BadRequest();
             }
 
-            patchDto.ApplyTo(villa, ModelState);
+            patchDto.ApplyTo(villaDTO, ModelState);
+
+
+
+            // Make VILLA DTO to VILLA so we can update
+            Villa model = new()
+            {
+                Amenity = villaDTO.Amenity,
+                Details = villaDTO.Details,
+                Id = villaDTO.Id,
+                ImageUrl = villaDTO.ImageUrl,
+                Name = villaDTO.Name,
+                Occupancy = villaDTO.Occupancy,
+                Rate = villaDTO.Rate,
+                Sqft = villaDTO.Sqft,
+            };
+
+            _db.Villas.Update(model);
+            _db.SaveChanges();
 
             if (!ModelState.IsValid)
             {

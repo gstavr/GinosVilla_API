@@ -2,6 +2,9 @@
 
 namespace GinosVilla_VillaAPI.Data
 {
+    /// <summary>
+    /// This was used as a temporary database for Testing Purposes it is removed from the app
+    /// </summary>
     public static class VillaStore
     {
         public static List<VillaDTO> villaList = new List<VillaDTO>
