@@ -1,5 +1,8 @@
+using GinosVilla_VillaAPI;
 using GinosVilla_VillaAPI.Data;
 using GinosVilla_VillaAPI.Logging;
+using GinosVilla_VillaAPI.Repository;
+using GinosVilla_VillaAPI.Repository.IRepository;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -12,6 +15,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultSQLConnection"));
 });
+//Register the Repository
+builder.Services.AddScoped<IVillaRepository, VillaRepository>(); // We add the IVillaRepository and the implementation of the interface is the VillaRepository
+
+// Register Automapper
+builder.Services.AddAutoMapper(typeof(MappingConfig)); // We can have all the mappings in the MappingConfig file
 
 
 //Log.Logger = new LoggerConfiguration().MinimumLevel.Debug().WriteTo.File("log/villaLogs.txt", rollingInterval: RollingInterval.Day).CreateLogger();
