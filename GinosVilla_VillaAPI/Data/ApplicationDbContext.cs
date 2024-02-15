@@ -12,6 +12,9 @@ namespace GinosVilla_VillaAPI.Data
         }
         public DbSet<Villa> Villas { get; set; } // This is the name the table will have
 
+        // Create the VillaNumbers
+        public DbSet<VillaNumber> VillaNumbers { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Villa>().HasData(

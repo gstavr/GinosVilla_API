@@ -18,6 +18,11 @@ namespace GinosVilla_VillaAPI
             CreateMap<Villa, VillaUpdateDTO>().ReverseMap();
 
 
+            // VillaNumber Mapping
+            CreateMap<VillaNumber, VillaNumberDTO>().ReverseMap();
+            CreateMap<VillaNumber, VillaNumberCreateDTO>().ReverseMap();
+            CreateMap<VillaNumber, VillaNumberUpdateDTO>().ReverseMap();
+
         }
     }
 }
