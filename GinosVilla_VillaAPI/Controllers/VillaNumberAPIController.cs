@@ -3,6 +3,7 @@ using GinosVilla_VillaAPI.Models;
 using GinosVilla_VillaAPI.Models.Dto;
 using GinosVilla_VillaAPI.Repository.IRepository;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
@@ -15,11 +16,13 @@ namespace GinosVilla_VillaAPI.Controllers
     {
         protected APIResponse _response;
         private readonly IVillaNumberRepository _dbVillaNumber;
+        private readonly IVillaRepository _dbVilla;
         private readonly IMapper _mapper;
 
-        public VillaNumberAPIController(IVillaNumberRepository dbVillaNumber, IMapper mapper)
+        public VillaNumberAPIController(IVillaNumberRepository dbVillaNumber, IVillaRepository dbVilla, IMapper mapper)
         {
             _dbVillaNumber = dbVillaNumber;
+            _dbVilla = dbVilla;
             _mapper = mapper;
             this._response = new ();
         }
@@ -91,7 +94,7 @@ namespace GinosVilla_VillaAPI.Controllers
 
 
         [HttpPost]
-        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<APIResponse>> CreateVillaNumber([FromBody] VillaNumberCreateDTO createDTO)
@@ -101,6 +104,13 @@ namespace GinosVilla_VillaAPI.Controllers
                 if(await _dbVillaNumber.GetAsync(x=>x.VillaNo.Equals(createDTO.VillaNo)) is not null){
                     
                     ModelState.AddModelError("CustomError", "VillaNumber already exists");
+
+                    return BadRequest(ModelState);
+                }
+
+                if(await _dbVilla.GetAsync(x=>x.Id.Equals(createDTO.VillaID)) is null)
+                {
+                    ModelState.AddModelError("CustomError", "Villa Id is Invalid");
 
                     return BadRequest(ModelState);
                 }
@@ -184,6 +194,14 @@ namespace GinosVilla_VillaAPI.Controllers
                 {
                     return BadRequest();
                 }
+
+                if (await _dbVilla.GetAsync(x => x.Id.Equals(updateDTO.VillaID)) is null)
+                {
+                    ModelState.AddModelError("CustomError", "Villa Id is Invalid");
+
+                    return BadRequest(ModelState);
+                }
+
 
                 VillaNumber villaNumber = _mapper.Map<VillaNumber>(updateDTO);
                 await _dbVillaNumber.UpdateAsync(villaNumber);
