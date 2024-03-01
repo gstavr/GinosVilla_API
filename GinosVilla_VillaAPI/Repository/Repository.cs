@@ -13,6 +13,7 @@ namespace GinosVilla_VillaAPI.Repository
         public Repository(ApplicationDbContext db)
         {
             _db = db;
+            //_db.VillaNumbers.Include(u => u.Villa).ToList();
             this._dbSet = db.Set<T>();
         }
 
@@ -22,7 +23,7 @@ namespace GinosVilla_VillaAPI.Repository
             await SaveAsync();
         }
 
-        public async Task<T> GetAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true)
+        public async Task<T> GetAsync(Expression<Func<T, bool>>? filter = null, bool tracked = true, string? includeProperties = null)
         {
             IQueryable<T> query = _dbSet;
 
@@ -36,16 +37,33 @@ namespace GinosVilla_VillaAPI.Repository
                 query = query.Where(filter);
             }
 
+            if(includeProperties is not null)
+            {
+                foreach (var property in includeProperties.Split(new char[] {','}, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    query = query.Include(property);
+                }
+            }
+
+
             return await query.FirstOrDefaultAsync();
         }
 
-        public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null)
+        public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, string? includeProperties = null)
         {
             IQueryable<T> query = _dbSet;
 
             if (filter != null)
             {
                 query = query.Where(filter);
+            }
+
+            if (includeProperties is not null)
+            {
+                foreach (var property in includeProperties.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    query = query.Include(property);
+                }
             }
 
             return await query.ToListAsync();

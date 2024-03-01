@@ -33,7 +33,7 @@ namespace GinosVilla_VillaAPI.Controllers
         {
             try
             {
-                IEnumerable<VillaNumber> villaNumbers = await _dbVillaNumber.GetAllAsync();
+                IEnumerable<VillaNumber> villaNumbers = await _dbVillaNumber.GetAllAsync(includeProperties:"Villa");
 
                 _response.Result = _mapper.Map<List<VillaNumberDTO>>(villaNumbers);
                 _response.StatusCode = HttpStatusCode.OK;
@@ -103,14 +103,14 @@ namespace GinosVilla_VillaAPI.Controllers
             {
                 if(await _dbVillaNumber.GetAsync(x=>x.VillaNo.Equals(createDTO.VillaNo)) is not null){
                     
-                    ModelState.AddModelError("CustomError", "VillaNumber already exists");
+                    ModelState.AddModelError("ErrorMessages", "VillaNumber already exists");
 
                     return BadRequest(ModelState);
                 }
 
                 if(await _dbVilla.GetAsync(x=>x.Id.Equals(createDTO.VillaID)) is null)
                 {
-                    ModelState.AddModelError("CustomError", "Villa Id is Invalid");
+                    ModelState.AddModelError("ErrorMessages", "Villa Id is Invalid");
 
                     return BadRequest(ModelState);
                 }
@@ -197,7 +197,7 @@ namespace GinosVilla_VillaAPI.Controllers
 
                 if (await _dbVilla.GetAsync(x => x.Id.Equals(updateDTO.VillaID)) is null)
                 {
-                    ModelState.AddModelError("CustomError", "Villa Id is Invalid");
+                    ModelState.AddModelError("ErrorMessages", "Villa Id is Invalid");
 
                     return BadRequest(ModelState);
                 }

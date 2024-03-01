@@ -164,7 +164,7 @@ namespace GinosVilla_VillaAPI.Controllers
                 if (await _dbVilla.GetAsync(x => x.Name.ToLower() == createDTO.Name.ToLower()) != null)
                 {
                     // The custom error message
-                    ModelState.AddModelError("CustomError", "Villa Already Exists");
+                    ModelState.AddModelError("ErrorMessages", "Villa Already Exists");
                     return BadRequest(ModelState);
                 }
 
