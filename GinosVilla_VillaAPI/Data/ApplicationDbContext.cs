@@ -10,6 +10,8 @@ namespace GinosVilla_VillaAPI.Data
         {
             
         }
+
+        public DbSet<LocalUser> LocalUsers { get; set; } // This is the name the table for users
         public DbSet<Villa> Villas { get; set; } // This is the name the table will have
 
         // Create the VillaNumbers

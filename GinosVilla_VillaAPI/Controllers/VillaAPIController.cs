@@ -5,6 +5,7 @@ using GinosVilla_VillaAPI.Logging;
 using GinosVilla_VillaAPI.Models;
 using GinosVilla_VillaAPI.Models.Dto;
 using GinosVilla_VillaAPI.Repository.IRepository;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.JsonPatch;
@@ -42,7 +43,10 @@ namespace GinosVilla_VillaAPI.Controllers
 
 
         [HttpGet]
+        [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         //public async Task<ActionResult<IEnumerable<VillaDTO>>> GetVillas() // 1# Adding ActionResult defines the type that we need to return 
         public async Task<ActionResult<APIResponse>> GetVillas() // Return APIResponse insteadof the above
         {
@@ -83,9 +87,12 @@ namespace GinosVilla_VillaAPI.Controllers
 
         // Informs that we expect on the Get Method an id value that it will be an integer
         [HttpGet("{id:int}", Name = "GetVilla")] // You can give explicit name to the route so you can use it 
+        [Authorize(Roles = "admin")]
         // Bellow different approaches of how to return and apply the Status Code that will be returned
         [ProducesResponseType(StatusCodes.Status200OK)] // Shows what the availabe response types that will be produced in order not to show undocumented
         [ProducesResponseType(StatusCodes.Status400BadRequest)] // Shows what the availabe response types that will be produced in order not to show undocumented
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(VillaDTO))] // Shows what the availabe response types that will be produced in order not to show undocumented
         // [ProducesResponseType(200, Type = typeof(VillaDTO))] // Shows what the availabe response type of 200 and the type that will be returned  in order not to show undocumented (if you remove the VillaDTO from the function ex public ActionResult GetVilla(int id)
         // [ProducesResponseType(StatusCodes.Status400BadRequest)] // Shows what the availabe response types that will be produced in order not to show undocumented
@@ -144,8 +151,11 @@ namespace GinosVilla_VillaAPI.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "admin")]
         [ProducesResponseType(StatusCodes.Status201Created)] // When Created and redirect to the resource 
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         //public async Task<ActionResult<VillaDTO>> CreateVilla([FromBody] VillaCreateDTO createDTO) { // The object that you receive is FromBody thats why we say
         public async Task<ActionResult<APIResponse>> CreateVilla([FromBody] VillaCreateDTO createDTO)
@@ -228,8 +238,11 @@ namespace GinosVilla_VillaAPI.Controllers
 
         [HttpDelete("{id:int}", Name = "DeleteVilla")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [Authorize(Roles = "CUSTOM")]
         // public async Task<IActionResult> DeleteVilla(int id) // We can use the Interface so se dont define the type of what we return for example we dont return <VillaDto> that why we dont need the ActionResult
         public async Task<ActionResult<APIResponse>> DeleteVilla(int id) // 
         {
