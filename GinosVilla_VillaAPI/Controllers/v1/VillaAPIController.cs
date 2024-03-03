@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Asp.Versioning;
+using AutoMapper;
 using Azure;
 using GinosVilla_VillaAPI.Data;
 using GinosVilla_VillaAPI.Logging;
@@ -13,11 +14,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 
-namespace GinosVilla_VillaAPI.Controllers
+namespace GinosVilla_VillaAPI.Controllers.v1
 {
     //[Route("api/VillaAPI")] hardcoded controller name for the API
-    [Route("api/[controller]")] // Takes the name of the controller
+    //[Route("api/[controller]")] // Takes the name of the controller
+    [Route("api/v{version:apiVersion}/[controller]")]
     [ApiController]
+    [ApiVersion("1.0")]
     public class VillaAPIController : ControllerBase
     {
         protected APIResponse _response;
@@ -25,9 +28,9 @@ namespace GinosVilla_VillaAPI.Controllers
         // private readonly ApplicationDbContext _db;
         private readonly IVillaRepository _dbVilla;
         private readonly IMapper _mapper;
-        
+
         // private readonly ILogger<VillaAPIController> _logger { get; }
-        
+
         // Custom Logger Interface
         //private readonly ILogging _logger;
 
@@ -36,14 +39,13 @@ namespace GinosVilla_VillaAPI.Controllers
         // public VillaAPIController(ApplicationDbContext db, IMapper mapper) 
         public VillaAPIController(IVillaRepository dbVilla, IMapper mapper)
         {
-            this._mapper = mapper;
-            this._dbVilla = dbVilla;
-            this._response = new();
+            _mapper = mapper;
+            _dbVilla = dbVilla;
+            _response = new();
         }
 
 
         [HttpGet]
-        [Authorize]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -65,7 +67,7 @@ namespace GinosVilla_VillaAPI.Controllers
                 IEnumerable<Villa> villaList = await _dbVilla.GetAllAsync();
 
 
-                _response.Result = this._mapper.Map<List<VillaDTO>>(villaList);
+                _response.Result = _mapper.Map<List<VillaDTO>>(villaList);
                 _response.StatusCode = HttpStatusCode.OK;
 
                 return Ok(_response); // New Return with the object APIRESPONSE
@@ -76,18 +78,17 @@ namespace GinosVilla_VillaAPI.Controllers
             {
 
                 _response.IsSuccess = false;
-                _response.ErrorMessages = new List<string>() { 
+                _response.ErrorMessages = new List<string>() {
                     ex.ToString()
                 };
 
                 return _response;
             }
-            
+
         }
 
         // Informs that we expect on the Get Method an id value that it will be an integer
-        [HttpGet("{id:int}", Name = "GetVilla")] // You can give explicit name to the route so you can use it 
-        [Authorize(Roles = "admin")]
+        [HttpGet("{id:int}", Name = "GetVilla")] // You can give explicit name to the route so you can use it         
         // Bellow different approaches of how to return and apply the Status Code that will be returned
         [ProducesResponseType(StatusCodes.Status200OK)] // Shows what the availabe response types that will be produced in order not to show undocumented
         [ProducesResponseType(StatusCodes.Status400BadRequest)] // Shows what the availabe response types that will be produced in order not to show undocumented
@@ -130,7 +131,7 @@ namespace GinosVilla_VillaAPI.Controllers
                 }
 
 
-                _response.Result = this._mapper.Map<VillaDTO>(villa);
+                _response.Result = _mapper.Map<VillaDTO>(villa);
                 _response.StatusCode = HttpStatusCode.OK;
 
                 return Ok(_response); // New Return with the object APIRESPONSE
@@ -147,7 +148,7 @@ namespace GinosVilla_VillaAPI.Controllers
 
                 return _response;
             }
-            
+
         }
 
         [HttpPost]
@@ -217,7 +218,7 @@ namespace GinosVilla_VillaAPI.Controllers
 
 
 
-                _response.Result = this._mapper.Map<VillaDTO>(villa);
+                _response.Result = _mapper.Map<VillaDTO>(villa);
                 _response.StatusCode = HttpStatusCode.Created;
 
                 return CreatedAtRoute("GetVilla", new { id = villa.Id }, _response); // New Return with the object APIRESPONSE
@@ -232,7 +233,7 @@ namespace GinosVilla_VillaAPI.Controllers
 
                 return _response;
             }
-                        
+
         }
 
 
@@ -242,7 +243,7 @@ namespace GinosVilla_VillaAPI.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [Authorize(Roles = "CUSTOM")]
+        [Authorize(Roles = "admin")]
         // public async Task<IActionResult> DeleteVilla(int id) // We can use the Interface so se dont define the type of what we return for example we dont return <VillaDto> that why we dont need the ActionResult
         public async Task<ActionResult<APIResponse>> DeleteVilla(int id) // 
         {
@@ -283,11 +284,12 @@ namespace GinosVilla_VillaAPI.Controllers
 
                 return _response;
             }
-            
+
         }
 
 
         [HttpPut("{id:int}", Name = "UpdateVilla")]
+        [Authorize(Roles = "admin")]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         //public async Task<IActionResult> UpdateVilla(int id, [FromBody] VillaUpdateDTO updateDTO)
@@ -301,7 +303,7 @@ namespace GinosVilla_VillaAPI.Controllers
                 }
 
                 ///// Use the AUTOMAPPER To do the mapping as we did manually bellow
-                Villa model = this._mapper.Map<Villa>(updateDTO);
+                Villa model = _mapper.Map<Villa>(updateDTO);
 
                 //_db.Villas.Update(model);
                 //await _db.SaveChangesAsync();
@@ -326,7 +328,7 @@ namespace GinosVilla_VillaAPI.Controllers
                 };
 
                 return _response;
-            }            
+            }
         }
 
 
@@ -336,6 +338,7 @@ namespace GinosVilla_VillaAPI.Controllers
         [HttpPatch("{id:int}", Name = "UpdatePartialVilla")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> UpdatePartialVilla(int id, JsonPatchDocument<VillaUpdateDTO> patchDto)
         {
 
@@ -350,7 +353,7 @@ namespace GinosVilla_VillaAPI.Controllers
 
             ///////
             ///// Use the AUTOMAPPER To do the mapping as we did manually bellow
-            VillaUpdateDTO villaDTO = this._mapper.Map<VillaUpdateDTO>(villa);
+            VillaUpdateDTO villaDTO = _mapper.Map<VillaUpdateDTO>(villa);
 
             if (villa == null)
             {
@@ -361,7 +364,7 @@ namespace GinosVilla_VillaAPI.Controllers
 
             ///////
             ///// Use the AUTOMAPPER To do the mapping as we did manually bellow
-            Villa model = this._mapper.Map<Villa>(villaDTO);
+            Villa model = _mapper.Map<Villa>(villaDTO);
 
 
             //_db.Villas.Update(model);

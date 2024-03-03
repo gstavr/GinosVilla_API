@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using GinosVilla_VillaAPI;
 using GinosVilla_VillaAPI.Data;
 using GinosVilla_VillaAPI.Logging;
@@ -26,6 +27,22 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 // Register Automapper
 builder.Services.AddAutoMapper(typeof(MappingConfig)); // We can have all the mappings in the MappingConfig file
+
+// Add Versioning
+builder.Services.AddApiVersioning( options =>
+{
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.DefaultApiVersion = new ApiVersion(1, 0);    
+    options.ReportApiVersions = true;
+}).AddApiExplorer(options =>
+{
+    //Tell swagger that we have versions
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
+
+
+
 
 var key = builder.Configuration.GetValue<string>("ApiSettings:Secret");
 builder.Services.AddAuthentication(x =>
@@ -89,6 +106,40 @@ builder.Services.AddSwaggerGen(options =>
             new List<string>()
         }
     });
+    options.SwaggerDoc("v1", new OpenApiInfo()
+    {
+        Version = "v1.0",
+        Title = "Ginos Villa V1",
+        Description = "API to manage Ginos Villa",
+        TermsOfService = new Uri("https://example.com/terms"),
+        Contact = new OpenApiContact()
+        {
+            Name = "Ginos",
+            Url = new Uri("https://github.com/gstavr/GinosVilla_API")
+        },
+        License = new OpenApiLicense()
+        {
+            Name = "Example License",
+            Url = new Uri("https://example.com/terms"),
+        }
+    });
+    options.SwaggerDoc("v2", new OpenApiInfo()
+    {
+        Version = "v2.0",
+        Title = "Ginos Villa V2",
+        Description = "API to manage Ginos Villa",
+        TermsOfService = new Uri("https://example.com/terms"),
+        Contact = new OpenApiContact()
+        {
+            Name = "Ginos",
+            Url = new Uri("https://github.com/gstavr/GinosVilla_API")
+        },
+        License = new OpenApiLicense()
+        {
+            Name = "Example License",
+            Url = new Uri("https://example.com/terms"),
+        }
+    });
 });
 
 // Add Custom Logger to DI
@@ -100,7 +151,12 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Ginos_VillaV1");
+        // Add Version 2 Document
+        options.SwaggerEndpoint("/swagger/v2/swagger.json", "Ginos_VillaV2");
+    });
 }
 
 app.UseHttpsRedirection();

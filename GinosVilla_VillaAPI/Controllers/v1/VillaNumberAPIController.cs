@@ -1,17 +1,23 @@
-﻿using AutoMapper;
+﻿using Asp.Versioning;
+using AutoMapper;
 using GinosVilla_VillaAPI.Models;
 using GinosVilla_VillaAPI.Models.Dto;
 using GinosVilla_VillaAPI.Repository.IRepository;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
-namespace GinosVilla_VillaAPI.Controllers
+namespace GinosVilla_VillaAPI.Controllers.v1
 {
     // [Route("api/[controller]")]
-    [Route("api/VillaNumberAPI")]
+    //[Route("api/VillaNumberAPI")]
+    [Route("api/v{version:apiVersion}/VillaNumberAPI")]
     [ApiController]
+    //[ApiVersion("1.0", Deprecated = true)] // When you wanna show Deprecated Version
+    [ApiVersion("1.0")]
+    //[ApiVersion("2.0")]
     public class VillaNumberAPIController : ControllerBase
     {
         protected APIResponse _response;
@@ -24,16 +30,17 @@ namespace GinosVilla_VillaAPI.Controllers
             _dbVillaNumber = dbVillaNumber;
             _dbVilla = dbVilla;
             _mapper = mapper;
-            this._response = new ();
+            _response = new();
         }
 
         [HttpGet]
+        //[MapToApiVersion("1.0")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<APIResponse>> GetVillaNumbers()
         {
             try
             {
-                IEnumerable<VillaNumber> villaNumbers = await _dbVillaNumber.GetAllAsync(includeProperties:"Villa");
+                IEnumerable<VillaNumber> villaNumbers = await _dbVillaNumber.GetAllAsync(includeProperties: "Villa");
 
                 _response.Result = _mapper.Map<List<VillaNumberDTO>>(villaNumbers);
                 _response.StatusCode = HttpStatusCode.OK;
@@ -50,6 +57,19 @@ namespace GinosVilla_VillaAPI.Controllers
             }
         }
 
+        //[MapToApiVersion("2.0")]
+        //[HttpGet]
+        //public IEnumerable<string> Get()
+        //{
+        //    return new string[] { "value1", "value2" };
+        //}
+
+        [HttpGet("GetString")]
+        public IEnumerable<string> Get()
+        {
+            return new string[] { "String1", "String2" };
+        }
+
         [HttpGet("{id:int}", Name = "GetVillaNumber")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -59,15 +79,15 @@ namespace GinosVilla_VillaAPI.Controllers
 
             try
             {
-                if(id == 0)
+                if (id == 0)
                 {
-                    _response.StatusCode =HttpStatusCode.BadRequest;
+                    _response.StatusCode = HttpStatusCode.BadRequest;
                     return BadRequest(_response);
                 }
 
                 var villaNumber = await _dbVillaNumber.GetAsync(x => x.VillaNo.Equals(id));
 
-                if(villaNumber is null)
+                if (villaNumber is null)
                 {
                     _response.StatusCode = HttpStatusCode.NotFound;
                     return NotFound(_response);
@@ -85,7 +105,7 @@ namespace GinosVilla_VillaAPI.Controllers
 
                 _response.IsSuccess = false;
                 _response.ErrorMessages = new List<string> { ex.Message.ToString() };
-                _response.StatusCode =HttpStatusCode.NotFound;
+                _response.StatusCode = HttpStatusCode.NotFound;
 
                 return _response;
             }
@@ -94,6 +114,7 @@ namespace GinosVilla_VillaAPI.Controllers
 
 
         [HttpPost]
+        [Authorize(Roles = "admin")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -101,21 +122,22 @@ namespace GinosVilla_VillaAPI.Controllers
         {
             try
             {
-                if(await _dbVillaNumber.GetAsync(x=>x.VillaNo.Equals(createDTO.VillaNo)) is not null){
-                    
+                if (await _dbVillaNumber.GetAsync(x => x.VillaNo.Equals(createDTO.VillaNo)) is not null)
+                {
+
                     ModelState.AddModelError("ErrorMessages", "VillaNumber already exists");
 
                     return BadRequest(ModelState);
                 }
 
-                if(await _dbVilla.GetAsync(x=>x.Id.Equals(createDTO.VillaID)) is null)
+                if (await _dbVilla.GetAsync(x => x.Id.Equals(createDTO.VillaID)) is null)
                 {
                     ModelState.AddModelError("ErrorMessages", "Villa Id is Invalid");
 
                     return BadRequest(ModelState);
                 }
 
-                if(createDTO is null)
+                if (createDTO is null)
                 {
                     return BadRequest(createDTO);
                 }
@@ -125,27 +147,28 @@ namespace GinosVilla_VillaAPI.Controllers
                 await _dbVillaNumber.CreateAsync(villaNumber);
 
                 _response.Result = _mapper.Map<VillaNumberDTO>(villaNumber);
-                _response.StatusCode=HttpStatusCode.Created;
+                _response.StatusCode = HttpStatusCode.Created;
 
                 return CreatedAtRoute("GetVillaNumber", new { id = villaNumber.VillaNo }, _response);
 
 
 
 
-            }catch (Exception ex)
+            }
+            catch (Exception ex)
             {
 
                 _response.IsSuccess = false;
-                _response.ErrorMessages = new List<string>{ ex.Message.ToString() };
+                _response.ErrorMessages = new List<string> { ex.Message.ToString() };
                 _response.StatusCode = HttpStatusCode.NotFound;
 
                 return _response;
             }
         }
 
-
+        [Authorize(Roles = "admin")]
         [HttpDelete("{id:int}", Name = "DeleteVillaNumber")]
-        [ProducesResponseType(StatusCodes.Status200OK)]        
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<APIResponse>> DeleteVillaNumber(int id)
@@ -153,14 +176,14 @@ namespace GinosVilla_VillaAPI.Controllers
 
             try
             {
-                if(id == 0)
+                if (id == 0)
                 {
                     return BadRequest();
                 }
 
-                var villaNumber = await _dbVillaNumber.GetAsync(x=>x.VillaNo == id);
+                var villaNumber = await _dbVillaNumber.GetAsync(x => x.VillaNo == id);
 
-                if(villaNumber is null)
+                if (villaNumber is null)
                 {
                     return NotFound();
                 }
@@ -182,7 +205,7 @@ namespace GinosVilla_VillaAPI.Controllers
 
             }
         }
-
+        [Authorize(Roles = "admin")]
         [HttpPut("{id:int}", Name = "UpdateVillaNumber")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -206,8 +229,8 @@ namespace GinosVilla_VillaAPI.Controllers
                 VillaNumber villaNumber = _mapper.Map<VillaNumber>(updateDTO);
                 await _dbVillaNumber.UpdateAsync(villaNumber);
 
-                _response.StatusCode =HttpStatusCode.OK;
-                
+                _response.StatusCode = HttpStatusCode.OK;
+
                 return Ok(_response);
 
             }

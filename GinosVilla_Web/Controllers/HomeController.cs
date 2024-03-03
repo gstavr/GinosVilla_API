@@ -1,4 +1,5 @@
 using AutoMapper;
+using GinosVilla_Utility;
 using GinosVilla_Web.Models;
 using GinosVilla_Web.Models.Dto;
 using GinosVilla_Web.Services.IServices;
@@ -22,7 +23,7 @@ namespace GinosVilla_Web.Controllers
         {
             List<VillaDTO> list = new();
 
-            var response = await _villaService.GetAllAsync<APIResponse>();
+            var response = await _villaService.GetAllAsync<APIResponse>(HttpContext.Session.GetString(SD.SessionToken));
 
             if (response != null && response.IsSuccess)
             {

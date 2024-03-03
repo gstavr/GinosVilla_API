@@ -1,20 +1,27 @@
-﻿using GinosVilla_VillaAPI.Models;
+﻿using Asp.Versioning;
+using GinosVilla_VillaAPI.Models;
 using GinosVilla_VillaAPI.Models.Dto;
 using GinosVilla_VillaAPI.Repository.IRepository;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
 namespace GinosVilla_VillaAPI.Controllers
-{
+{   
     //[Route("api/[controller]")]
-    [Route("api/UsersAuth")]
+    [Route("api/v{version:apiVersion}/UsersAuth")]
+    [ApiController]
+    [ApiVersionNeutral] // When this API Dont have specific Version Endpoint
+    //[ApiVersion("1.0")] 
+    //[Route("api/UsersAuth")]
+
     public class UsersController : Controller
     {
         private readonly IUserRepository _userRepository;
         protected APIResponse _response;
-        public UsersController(IUserRepository userRepository) {
+        public UsersController(IUserRepository userRepository)
+        {
             _userRepository = userRepository;
-            this._response = new();
+            _response = new();
         }
 
         [HttpPost("login")]
@@ -35,13 +42,13 @@ namespace GinosVilla_VillaAPI.Controllers
             _response.StatusCode = HttpStatusCode.OK;
             _response.Result = loginResponse;
 
-            return Ok(_response);                        
+            return Ok(_response);
         }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegistrationRequestDTO model)
         {
-            bool ifUserNameUnique =  _userRepository.IsUniqueUser(model.UserName);
+            bool ifUserNameUnique = _userRepository.IsUniqueUser(model.UserName);
             if (!ifUserNameUnique)
             {
                 _response.StatusCode = HttpStatusCode.BadRequest;
@@ -65,7 +72,7 @@ namespace GinosVilla_VillaAPI.Controllers
             //_response.Result = user;
 
             return Ok(_response);
-            
+
         }
     }
 }
