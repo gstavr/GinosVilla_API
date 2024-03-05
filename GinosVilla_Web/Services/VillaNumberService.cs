@@ -20,7 +20,7 @@ namespace GinosVilla_Web.Services
             {
                 ApiType = SD.ApiType.POST,
                 Data = dto,
-                Url = villaUrl + "/api/v1/VillaNumberAPI",
+                Url = villaUrl + $"/api/{SD.CurrentAPIVerson}/VillaNumberAPI",
                 Token = token
             });
         }
@@ -30,7 +30,7 @@ namespace GinosVilla_Web.Services
             return SendAsync<T>(new APIRequest()
             {
                 ApiType = SD.ApiType.DELETE,                
-                Url = villaUrl + "/api/v1/VillaNumberAPI/" + id,
+                Url = villaUrl + $"/api/{SD.CurrentAPIVerson}/VillaNumberAPI/" + id,
                 Token = token
             });
         }
@@ -40,7 +40,7 @@ namespace GinosVilla_Web.Services
             return SendAsync<T>(new APIRequest()
             {
                 ApiType = SD.ApiType.GET,
-                Url = villaUrl + "/api/v1/VillaNumberAPI",
+                Url = villaUrl + $"/api/{SD.CurrentAPIVerson}/VillaNumberAPI",
                 Token = token
             });
         }
@@ -50,7 +50,7 @@ namespace GinosVilla_Web.Services
             return SendAsync<T>(new APIRequest()
             {
                 ApiType = SD.ApiType.GET,                
-                Url = villaUrl + "/api/v1/VillaNumberAPI/" + id,
+                Url = villaUrl + $"/api/{SD.CurrentAPIVerson}/VillaNumberAPI/" + id,
                 Token = token
             });
         }
@@ -61,7 +61,7 @@ namespace GinosVilla_Web.Services
             {
                 ApiType = SD.ApiType.PUT,
                 Data = dto,
-                Url = villaUrl + "/api/v1/VillaNumberAPI/" + dto.VillaNo,
+                Url = villaUrl + $"/api/{SD.CurrentAPIVerson}/VillaNumberAPI/" + dto.VillaNo,
                 Token = token
             });
         }

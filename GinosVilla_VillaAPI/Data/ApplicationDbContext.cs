@@ -1,15 +1,18 @@
 ﻿using GinosVilla_VillaAPI.Models;
 using GinosVilla_VillaAPI.Models.Dto;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace GinosVilla_VillaAPI.Data
 {
-    public class ApplicationDbContext:DbContext
+    public class ApplicationDbContext:IdentityDbContext<ApplicationUser> // To add to the db the application user we have
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options):base(options)
         {
             
         }
+
+        public DbSet<ApplicationUser> ApplicationUser {  get; set; }
 
         public DbSet<LocalUser> LocalUsers { get; set; } // This is the name the table for users
         public DbSet<Villa> Villas { get; set; } // This is the name the table will have
@@ -19,6 +22,9 @@ namespace GinosVilla_VillaAPI.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // We have to override in order Identity to work
+            base.OnModelCreating(modelBuilder);
+
             modelBuilder.Entity<Villa>().HasData(
                 new Villa
                 {
@@ -30,7 +36,7 @@ namespace GinosVilla_VillaAPI.Data
                     Rate = 200,
                     Sqft = 550,
                     Amenity = "",
-                    CreatedDate = DateTime.Now,
+                    CreatedDate = new DateTime(2024,03,5)
                 },
               new Villa
               {
@@ -42,7 +48,7 @@ namespace GinosVilla_VillaAPI.Data
                   Rate = 300,
                   Sqft = 550,
                   Amenity = "",
-                  CreatedDate = DateTime.Now,
+                  CreatedDate = new DateTime(2024, 03, 5)
               },
               new Villa
               {
@@ -54,7 +60,7 @@ namespace GinosVilla_VillaAPI.Data
                   Rate = 400,
                   Sqft = 750,
                   Amenity = "",
-                  CreatedDate = DateTime.Now,
+                  CreatedDate = new DateTime(2024, 03, 5)
               },
               new Villa
               {
@@ -66,7 +72,7 @@ namespace GinosVilla_VillaAPI.Data
                   Rate = 550,
                   Sqft = 900,
                   Amenity = "",
-                  CreatedDate = DateTime.Now,
+                  CreatedDate = new DateTime(2024, 03, 5)
               },
               new Villa
               {
@@ -78,7 +84,7 @@ namespace GinosVilla_VillaAPI.Data
                   Rate = 600,
                   Sqft = 1100,
                   Amenity = "",
-                  CreatedDate = DateTime.Now,
+                  CreatedDate = new DateTime(2024, 03, 5)
               });
         }
     }

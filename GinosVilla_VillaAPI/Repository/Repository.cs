@@ -37,6 +37,7 @@ namespace GinosVilla_VillaAPI.Repository
                 query = query.Where(filter);
             }
 
+
             if(includeProperties is not null)
             {
                 foreach (var property in includeProperties.Split(new char[] {','}, StringSplitOptions.RemoveEmptyEntries))
@@ -49,13 +50,25 @@ namespace GinosVilla_VillaAPI.Repository
             return await query.FirstOrDefaultAsync();
         }
 
-        public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, string? includeProperties = null)
+        public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, string? includeProperties = null, int pageSize = 0, int pageNumber = 1)
         {
             IQueryable<T> query = _dbSet;
 
             if (filter != null)
             {
                 query = query.Where(filter);
+            }
+
+            if (pageSize > 0)
+            {
+                if (pageSize > 100)
+                {
+                    pageSize = 100;
+                }
+                //skip0.Take(5)
+                // pageNumber - 2 || page size -5
+                // skip(5*(1)) take 5
+                query = query.Skip(pageSize * (pageNumber - 1)).Take(pageSize);
             }
 
             if (includeProperties is not null)
@@ -65,6 +78,8 @@ namespace GinosVilla_VillaAPI.Repository
                     query = query.Include(property);
                 }
             }
+
+
 
             return await query.ToListAsync();
 

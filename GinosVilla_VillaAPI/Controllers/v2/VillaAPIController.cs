@@ -12,16 +12,17 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Net;
 using System.Text.Json;
 
-namespace GinosVilla_VillaAPI.Controllers.v1
+namespace GinosVilla_VillaAPI.Controllers.v2
 {
     //[Route("api/VillaAPI")] hardcoded controller name for the API
     //[Route("api/[controller]")] // Takes the name of the controller
     [Route("api/v{version:apiVersion}/[controller]")]
     [ApiController]
-    [ApiVersion("1.0")]
+    [ApiVersion("2.0")]
     public class VillaAPIController : ControllerBase
     {
         protected APIResponse _response;
@@ -30,14 +31,7 @@ namespace GinosVilla_VillaAPI.Controllers.v1
         private readonly IVillaRepository _dbVilla;
         private readonly IMapper _mapper;
 
-        // private readonly ILogger<VillaAPIController> _logger { get; }
-
-        // Custom Logger Interface
-        //private readonly ILogging _logger;
-
-        // public VillaAPIController(ILogging logger) Custom Logging DI
-        // public VillaAPIController(ILogger<VillaAPIController> logger) this is how we implement build in logger
-        // public VillaAPIController(ApplicationDbContext db, IMapper mapper) 
+        
         public VillaAPIController(IVillaRepository dbVilla, IMapper mapper)
         {
             _mapper = mapper;
@@ -47,36 +41,24 @@ namespace GinosVilla_VillaAPI.Controllers.v1
 
 
         [HttpGet]
-        //[ResponseCache(CacheProfileName = "Default30")] //Add Caching Profile 
-        //[ResponseCache(Duration = 30)] //Add Caching for 30 seconds
+      
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        //public async Task<ActionResult<IEnumerable<VillaDTO>>> GetVillas() // 1# Adding ActionResult defines the type that we need to return 
-        public async Task<ActionResult<APIResponse>> GetVillas([FromQuery(Name = "filterOccupancy")]int? occupancy, [FromQuery] string? search,
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]       
+        public async Task<ActionResult<APIResponse>> GetVillas([FromQuery(Name = "filterOccupancy")] int? occupancy, [FromQuery] string? search,
             int pageSize = 0, int pageNumber = 1) // Return APIResponse insteadof the above with 2 attributes in the Query
         {
             try
             {
-                //Custom Logger
-                //_logger.Log("Getting all villas", "");
-                //_logger.LogInformation("Getting all villas");
+                                IEnumerable<Villa> villaList = await _dbVilla.GetAllAsync();
 
-                //return Ok(await _db.Villas.ToListAsync()); // 1# When returning the ActionResult we need to say the type that we return for example Ok, NotFound etc
-
-                // With AutoMapper
-                //IEnumerable<Villa> villaList = await _db.Villas.ToListAsync();
-
-                //With RepositoryPattern
-                IEnumerable<Villa> villaList = await _dbVilla.GetAllAsync();
-
-                if(occupancy > 0 )
+                if (occupancy > 0)
                 {
-                    villaList = await _dbVilla.GetAllAsync(x=>x.Occupancy == occupancy, pageSize: pageSize, pageNumber:pageNumber);
+                    villaList = await _dbVilla.GetAllAsync(x => x.Occupancy == occupancy, pageSize: pageSize, pageNumber: pageNumber);
                 }
                 else
                 {
-                    villaList = await _dbVilla.GetAllAsync(pageSize: pageSize,pageNumber:pageNumber);
+                    villaList = await _dbVilla.GetAllAsync(pageSize: pageSize, pageNumber: pageNumber);
                 }
 
                 if (!string.IsNullOrEmpty(search))
@@ -84,10 +66,9 @@ namespace GinosVilla_VillaAPI.Controllers.v1
                     villaList = villaList.Where(x => x.Name.ToLower().Contains(search));
                 }
 
-                // Add pagination info to header
+                
                 Pagination pagination = new Pagination() { PageNumber = pageNumber, PageSize = pageSize };
-
-                // Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(pagination));
+                
                 Response.Headers.Append("X-Pagination", JsonSerializer.Serialize(pagination));
 
                 _response.Result = _mapper.Map<List<VillaDTO>>(villaList);
@@ -95,7 +76,7 @@ namespace GinosVilla_VillaAPI.Controllers.v1
 
                 return Ok(_response); // New Return with the object APIRESPONSE
 
-                //return Ok(this._mapper.Map<List<VillaDTO>>(villaList));
+                
             }
             catch (Exception ex)
             {
@@ -111,40 +92,26 @@ namespace GinosVilla_VillaAPI.Controllers.v1
         }
 
         // Informs that we expect on the Get Method an id value that it will be an integer
-        [HttpGet("{id:int}", Name = "GetVilla")] // You can give explicit name to the route so you can use it
-        //[ResponseCache(Duration = 30)] //Add Caching for 30 seconds                                                 
-        //[ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)] //Disable Caching for error pages Means retreive vila from DB
-        // Bellow different approaches of how to return and apply the Status Code that will be returned
+        [HttpGet("{id:int}", Name = "GetVilla")] // You can give explicit name to the route so you can use it        
         [ProducesResponseType(StatusCodes.Status200OK)] // Shows what the availabe response types that will be produced in order not to show undocumented
         [ProducesResponseType(StatusCodes.Status400BadRequest)] // Shows what the availabe response types that will be produced in order not to show undocumented
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(VillaDTO))] // Shows what the availabe response types that will be produced in order not to show undocumented
-        // [ProducesResponseType(200, Type = typeof(VillaDTO))] // Shows what the availabe response type of 200 and the type that will be returned  in order not to show undocumented (if you remove the VillaDTO from the function ex public ActionResult GetVilla(int id)
-        // [ProducesResponseType(StatusCodes.Status400BadRequest)] // Shows what the availabe response types that will be produced in order not to show undocumented
-        // [ProducesResponseType(404)] // Shows what the availabe response types that will be produced in order not to show undocumented
-        //public async Task<ActionResult<VillaDTO>> GetVilla(int id)
+        
         public async Task<ActionResult<APIResponse>> GetVilla(int id)
         {
             try
             {
                 if (id == 0)
                 {
-                    //Custom Logger
-                    //_logger.Log("Getting all villas", "error");
-
-                    // Logger
-                    //_logger.LogInformation("Get Villa Error with id " + id);
-
+                    
                     _response.StatusCode = HttpStatusCode.BadRequest;
 
                     return BadRequest(_response);
-                    //return BadRequest();
+                    
                 }
-
-                // var villa = await _db.Villas.FirstOrDefaultAsync(x => x.Id.Equals(id));
-
-                //With Repository Pattern
+                                
                 var villa = await _dbVilla.GetAsync(x => x.Id.Equals(id));
 
                 if (villa is null) // Equal to villa == null
@@ -152,16 +119,15 @@ namespace GinosVilla_VillaAPI.Controllers.v1
                     _response.StatusCode = HttpStatusCode.NotFound;
 
                     return NotFound(_response);
-                    //return NotFound();
+                    
                 }
 
 
                 _response.Result = _mapper.Map<VillaDTO>(villa);
                 _response.StatusCode = HttpStatusCode.OK;
 
-                return Ok(_response); // New Return with the object APIRESPONSE
-
-                //return Ok(this._mapper.Map<VillaDTO>(villa));
+                return Ok(_response); 
+                
             }
             catch (Exception ex)
             {
@@ -182,9 +148,8 @@ namespace GinosVilla_VillaAPI.Controllers.v1
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        //public async Task<ActionResult<VillaDTO>> CreateVilla([FromBody] VillaCreateDTO createDTO) { // The object that you receive is FromBody thats why we say
-        public async Task<ActionResult<APIResponse>> CreateVilla([FromBody] VillaCreateDTO createDTO)
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]       
+        public async Task<ActionResult<APIResponse>> CreateVilla([FromForm] VillaCreateDTO createDTO)
         {
 
             try
@@ -193,10 +158,7 @@ namespace GinosVilla_VillaAPI.Controllers.v1
                 {
                     return BadRequest(ModelState); // In order to display the error message if the API is missing the [ApiController] Annotation
                 }
-
-
-                //Throw custom error model if the name is not uniquie
-                // if (await _db.Villas.FirstOrDefaultAsync(x => x.Name.ToLower() == createDTO.Name.ToLower()) != null)
+              
                 if (await _dbVilla.GetAsync(x => x.Name.ToLower() == createDTO.Name.ToLower()) != null)
                 {
                     // The custom error message
@@ -208,41 +170,40 @@ namespace GinosVilla_VillaAPI.Controllers.v1
                 {
                     return BadRequest(createDTO); // Return BadRequest
                 }
-
-                //if(villaDTO.Id > 0) // Means that it's not a create Request show we return a BadRequest or return something else with the Status Code
-                //{
-                //    return StatusCode(StatusCodes.Status500InternalServerError); // Example of returning Bad request or not found
-                //}
-
-                // Use the AUTOMAPPER To do the mapping as we did manually bellow
+                
                 Villa villa = _mapper.Map<Villa>(createDTO);
 
-                // Map the new Villa cause it DTO
-                //Villa model = new()
-                //{
-                //    Amenity = createDTO.Amenity,
-                //    Details = createDTO.Details,                
-                //    ImageUrl = createDTO.ImageUrl,
-                //    Name = createDTO.Name,
-                //    Occupancy = createDTO.Occupancy,
-                //    Rate = createDTO.Rate,
-                //    Sqft = createDTO.Sqft,
-                //};
-
-                //await _db.Villas.AddAsync(model);
-                //await _db.SaveChangesAsync();
-                // Repository Pattern Bellow and above save to db 
+                
                 await _dbVilla.CreateAsync(villa);
 
+                if(createDTO.Image is not null)
+                {
+                    string fileName = villa.Id + Path.GetExtension(createDTO.Image.FileName);
+                    string filePath = @"wwwroot\ProductImage\" + fileName;
 
-                // Nice to return the route to the new Villa that is created
-                // You need to provide the NAME of the route and the parameters that is needed
+                    var directoryLocation = Path.Combine(Directory.GetCurrentDirectory(), filePath);
 
-                //return CreatedAtRoute("GetVilla", new { id = model.Id }, model);
-                // return CreatedAtRoute("GetVilla", villaDTO, villaDTO); 
+                    FileInfo file = new FileInfo(directoryLocation);
+                    if (file.Exists)
+                    {
+                        file.Delete();
+                    }
+                    
+                    using (var fileStream = new FileStream(directoryLocation, FileMode.Create))
+                    {
+                        createDTO.Image.CopyTo(fileStream);
+                    }
 
+                    var baseUrl = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}{HttpContext.Request.PathBase.Value}";
+                    villa.ImageUrl = baseUrl + "/ProductImage/" + fileName;
+                    villa.ImageLocalPath = filePath;
+                }
+                else
+                {
+                    villa.ImageUrl = "https://placehold.co/600x400";
+                }
 
-
+                await _dbVilla.UpdateAsync(villa);
                 _response.Result = _mapper.Map<VillaDTO>(villa);
                 _response.StatusCode = HttpStatusCode.Created;
 
@@ -269,7 +230,7 @@ namespace GinosVilla_VillaAPI.Controllers.v1
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [Authorize(Roles = "admin")]
-        // public async Task<IActionResult> DeleteVilla(int id) // We can use the Interface so se dont define the type of what we return for example we dont return <VillaDto> that why we dont need the ActionResult
+        
         public async Task<ActionResult<APIResponse>> DeleteVilla(int id) // 
         {
             try
@@ -279,25 +240,31 @@ namespace GinosVilla_VillaAPI.Controllers.v1
                     return BadRequest();
                 }
 
-                // var villa = await _db.Villas.FirstOrDefaultAsync(x => x.Id == id); BEFORE REPOSITORY PATTER
+               
                 var villa = await _dbVilla.GetAsync(x => x.Id == id);
                 if (villa == null)
                 {
                     return NotFound();
                 }
 
-                //_db.Villas.Remove(villa);
-                //await _db.SaveChangesAsync();
+                if (!string.IsNullOrEmpty(villa.ImageLocalPath))
+                {
+                    var oldFilePathDirectory = Path.Combine(Directory.GetCurrentDirectory(), villa.ImageLocalPath);
+                    FileInfo file = new FileInfo(oldFilePathDirectory);
+                    if (file.Exists)
+                    {
+                        file.Delete();
+                    }
+                }
 
                 await _dbVilla.RemoveAsync(villa);
 
-                // New Response Object            
+                     
                 _response.StatusCode = HttpStatusCode.NoContent;
                 _response.IsSuccess = true;
 
                 return Ok(_response);
 
-                //return NoContent();
             }
             catch (Exception ex)
             {
@@ -317,8 +284,8 @@ namespace GinosVilla_VillaAPI.Controllers.v1
         [Authorize(Roles = "admin")]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
-        //public async Task<IActionResult> UpdateVilla(int id, [FromBody] VillaUpdateDTO updateDTO)
-        public async Task<ActionResult<APIResponse>> UpdateVilla(int id, [FromBody] VillaUpdateDTO updateDTO)
+        
+        public async Task<ActionResult<APIResponse>> UpdateVilla(int id, [FromForm] VillaUpdateDTO updateDTO)
         {
             try
             {
@@ -326,23 +293,48 @@ namespace GinosVilla_VillaAPI.Controllers.v1
                 {
                     return BadRequest();
                 }
+                
+                Villa villa = _mapper.Map<Villa>(updateDTO);
 
-                ///// Use the AUTOMAPPER To do the mapping as we did manually bellow
-                Villa model = _mapper.Map<Villa>(updateDTO);
+                if (updateDTO.Image is not null)
+                {
+                    if (!string.IsNullOrEmpty(villa.ImageLocalPath))
+                    {
+                        var oldFilePathDirectory = Path.Combine(Directory.GetCurrentDirectory(), villa.ImageLocalPath);
+                        FileInfo file = new FileInfo(oldFilePathDirectory);
+                        if (file.Exists)
+                        {
+                            file.Delete();
+                        }
+                    }
 
-                //_db.Villas.Update(model);
-                //await _db.SaveChangesAsync();
-                // Repository Pattern Bellow Old pattern above
-                await _dbVilla.UpdateAsync(model);
+                    string fileName = updateDTO.Id + Path.GetExtension(updateDTO.Image.FileName);
+                    string filePath = @"wwwroot\ProductImage\" + fileName;
 
+                    var directoryLocation = Path.Combine(Directory.GetCurrentDirectory(), filePath);
 
-                // New Response Object            
+                    using (var fileStream = new FileStream(directoryLocation, FileMode.Create))
+                    {
+                        updateDTO.Image.CopyTo(fileStream);
+                    }
+
+                    var baseUrl = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host.Value}{HttpContext.Request.PathBase.Value}";
+                    villa.ImageUrl = baseUrl + "/ProductImage/" + fileName;
+                    villa.ImageLocalPath = filePath;
+                }
+                else
+                {
+                    villa.ImageUrl = "https://placehold.co/600x400";
+                }
+
+                await _dbVilla.UpdateAsync(villa);
+
+                     
                 _response.StatusCode = HttpStatusCode.NoContent;
                 _response.IsSuccess = true;
 
                 return Ok(_response);
 
-                //return NoContent();
             }
             catch (Exception ex)
             {
@@ -370,14 +362,9 @@ namespace GinosVilla_VillaAPI.Controllers.v1
             if (patchDto is null || id == 0)
             {
                 return BadRequest();
-            }
-
-            // The AsNoTracking stops the tracking of the ENTITY FRAMEWORK
-            //var villa = await _db.Villas.AsNoTracking().FirstOrDefaultAsync(x=>x.Id==id);
+            }            
             var villa = await _dbVilla.GetAsync(x => x.Id == id, tracked: false);
-
-            ///////
-            ///// Use the AUTOMAPPER To do the mapping as we did manually bellow
+                       
             VillaUpdateDTO villaDTO = _mapper.Map<VillaUpdateDTO>(villa);
 
             if (villa == null)
@@ -387,14 +374,10 @@ namespace GinosVilla_VillaAPI.Controllers.v1
 
             patchDto.ApplyTo(villaDTO, ModelState);
 
-            ///////
-            ///// Use the AUTOMAPPER To do the mapping as we did manually bellow
+          
             Villa model = _mapper.Map<Villa>(villaDTO);
 
 
-            //_db.Villas.Update(model);
-            //await _db.SaveChangesAsync();
-            // Repository Pattern Bellow Old pattern above
             await _dbVilla.UpdateAsync(model);
 
 

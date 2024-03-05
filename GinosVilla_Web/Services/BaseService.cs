@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using static GinosVilla_Utility.SD;
 
 namespace GinosVilla_Web.Services
 {
@@ -13,8 +14,9 @@ namespace GinosVilla_Web.Services
         public APIResponse responseModel { get; set; }
         public IHttpClientFactory httpClient { get; set; }
 
-        public BaseService(IHttpClientFactory httpClient) { 
-            this.responseModel = new ();
+        public BaseService(IHttpClientFactory httpClient)
+        {
+            this.responseModel = new();
             this.httpClient = httpClient;
         }
 
@@ -23,14 +25,47 @@ namespace GinosVilla_Web.Services
             try
             {
                 var client = httpClient.CreateClient("GinosAPI");
-                HttpRequestMessage message = new ();
-                message.Headers.Add("Accept", "application/json");
+                HttpRequestMessage message = new();
+                if (apiRequest.ContentType == ContentType.MultipartFormData)
+                {
+                    message.Headers.Add("Accept", "*/*");
+                }
+                else
+                {
+                    message.Headers.Add("Accept", "application/json");
+                }
+
                 //message.Headers.Add ("Content-Type", "application/json");
                 message.RequestUri = new Uri(apiRequest.Url);
-                
-                if(apiRequest.Data is not null)
+
+                if (apiRequest.ContentType == ContentType.MultipartFormData)
                 {
-                    message.Content = new StringContent(JsonConvert.SerializeObject(apiRequest.Data), Encoding.UTF8, "application/json");
+                    var content = new MultipartFormDataContent();
+                    foreach (var prop in apiRequest.Data.GetType().GetProperties())
+                    {
+                        var value = prop.GetValue(apiRequest.Data);
+                        if (value is FormFile)
+                        {
+                            var file = (FormFile)value;
+                            if (file is not null)
+                            {
+                                content.Add(new StreamContent(file.OpenReadStream()), prop.Name, file.FileName);
+                            }
+                        }
+                        else
+                        {
+                            content.Add(new StringContent(value == null ? "" : value.ToString()), prop.Name);
+                        }
+                    }
+
+                    message.Content = content;
+                }
+                else
+                {
+                    if (apiRequest.Data is not null)
+                    {
+                        message.Content = new StringContent(JsonConvert.SerializeObject(apiRequest.Data), Encoding.UTF8, "application/json");
+                    }
                 }
 
                 message.Method = apiRequest.ApiType switch
@@ -44,7 +79,7 @@ namespace GinosVilla_Web.Services
 
                 HttpResponseMessage apiResponse = null;
 
-                if(!string.IsNullOrEmpty(apiRequest.Token))
+                if (!string.IsNullOrEmpty(apiRequest.Token))
                 {
                     client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiRequest.Token);
                 }
@@ -55,7 +90,7 @@ namespace GinosVilla_Web.Services
                 try
                 {
                     APIResponse ApiResponse = JsonConvert.DeserializeObject<APIResponse>(apiContent);
-                    if(ApiResponse != null && (apiResponse.StatusCode == System.Net.HttpStatusCode.BadRequest || apiResponse.StatusCode == System.Net.HttpStatusCode.NotFound))
+                    if (ApiResponse != null && (apiResponse.StatusCode == System.Net.HttpStatusCode.BadRequest || apiResponse.StatusCode == System.Net.HttpStatusCode.NotFound))
                     {
                         ApiResponse.StatusCode = System.Net.HttpStatusCode.BadRequest;
                         ApiResponse.IsSuccess = false;
@@ -63,7 +98,7 @@ namespace GinosVilla_Web.Services
                         var returnObj = JsonConvert.DeserializeObject<T>(res);
                         return returnObj;
                     }
-                    
+
                 }
                 catch (Exception)
                 {

@@ -19,7 +19,7 @@ namespace GinosVilla_Web.Services
             {
                 ApiType = SD.ApiType.POST,
                 Data = loginRequestDTO,
-                Url = villaUrl + "/api/v1/UsersAuth/login"
+                Url = villaUrl + $"/api/{SD.CurrentAPIVerson}/UsersAuth/login"
             });
         }
 
@@ -29,7 +29,7 @@ namespace GinosVilla_Web.Services
             {
                 ApiType = SD.ApiType.POST,
                 Data = registrationRequestDTO,
-                Url = villaUrl + "/api/v1/UsersAuth/register"
+                Url = villaUrl + $"/api/{SD.CurrentAPIVerson}/UsersAuth/register"
             });
         }
     }

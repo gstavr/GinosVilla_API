@@ -7,7 +7,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Newtonsoft.Json;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace GinosVilla_Web.Controllers
@@ -41,9 +43,12 @@ namespace GinosVilla_Web.Controllers
             {
                 LoginResponseDTO model = JsonConvert.DeserializeObject<LoginResponseDTO>(Convert.ToString(response.Result));
 
+                var handler = new JwtSecurityTokenHandler();
+                var jwt = handler.ReadJwtToken(model.Token);
+
                 var identity = new ClaimsIdentity(CookieAuthenticationDefaults.AuthenticationScheme);
-                identity.AddClaim(new Claim(ClaimTypes.Name, model.User.UserName));
-                identity.AddClaim(new Claim(ClaimTypes.Role, model.User.Role));
+                identity.AddClaim(new Claim(ClaimTypes.Name, jwt.Claims.FirstOrDefault(x => x.Type == "unique_name").Value));
+                identity.AddClaim(new Claim(ClaimTypes.Role, jwt.Claims.FirstOrDefault(x=>x.Type == "role").Value));
                 var principal = new ClaimsPrincipal(identity);
 
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
@@ -62,8 +67,15 @@ namespace GinosVilla_Web.Controllers
         }
 
         [HttpGet]
-        public IActionResult Register() { 
-        
+        public IActionResult Register() {
+
+            var roleList = new List<SelectListItem>()
+            {
+                new SelectListItem{Text = SD.Admin, Value = SD.Admin},
+                new SelectListItem{Text = SD.Customer, Value = SD.Customer},
+            };
+
+            ViewBag.RoleList = roleList;
             return View();
         }
 
@@ -71,6 +83,11 @@ namespace GinosVilla_Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegistrationRequestDTO registrationRequestDTO)
         {
+            if (string.IsNullOrEmpty(registrationRequestDTO.Role))
+            {
+                registrationRequestDTO.Role = SD.Customer;
+            }
+
             APIResponse result= await _authService.RegisterAsync<APIResponse>(registrationRequestDTO);
 
             if(result is not null && result.IsSuccess )
@@ -78,6 +95,14 @@ namespace GinosVilla_Web.Controllers
                 return RedirectToAction("Login");
             }
 
+
+            var roleList = new List<SelectListItem>()
+            {
+                new SelectListItem{Text = SD.Admin, Value = SD.Admin},
+                new SelectListItem{Text = SD.Customer, Value = SD.Customer},
+            };
+
+            ViewBag.RoleList = roleList;
 
             return View();
         }

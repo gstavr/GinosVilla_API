@@ -10,6 +10,9 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
+using GinosVilla_VillaAPI.Models;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +23,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultSQLConnection"));
 });
+// Add Identity 
+// builder.Services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>(); This is the default
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>(); // This is our extend user
+//Add Caching
+builder.Services.AddResponseCaching();
+
 //Register the Repository
 builder.Services.AddScoped<IVillaRepository, VillaRepository>(); // We add the IVillaRepository and the implementation of the interface is the VillaRepository
 builder.Services.AddScoped<IVillaNumberRepository, VillaNumberRepository>();
@@ -66,9 +75,9 @@ builder.Services.AddAuthentication(x =>
 //Log.Logger = new LoggerConfiguration().MinimumLevel.Debug().WriteTo.File("log/villaLogs.txt", rollingInterval: RollingInterval.Day).CreateLogger();
 //builder.Host.UseSerilog(); // Define to use Serilog not the default logger
 
-builder.Services
-    .AddControllers(option =>
+builder.Services.AddControllers(option =>
     {
+        //option.CacheProfiles.Add("Default30", new CacheProfile() { Duration = 30}); // Add A Cache Profile in the programm
         //option.ReturnHttpNotAcceptable = true; // With this line we say what type of return we accept for is json and not XML example application/xml etc etc
     })
     .AddNewtonsoftJson()  // Add NewtonSoftJson for the PATCH API
@@ -152,12 +161,15 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Ginos_VillaV1");
+    {   
         // Add Version 2 Document
         options.SwaggerEndpoint("/swagger/v2/swagger.json", "Ginos_VillaV2");
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Ginos_VillaV1");
+
     });
 }
+
+app.UseStaticFiles(); // Make wwwroot accessable
 
 app.UseHttpsRedirection();
 
