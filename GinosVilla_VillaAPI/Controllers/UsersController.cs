@@ -57,9 +57,8 @@ namespace GinosVilla_VillaAPI.Controllers
                 return BadRequest(_response);
             }
 
-            var user = _userRepository.Register(model);
-
-            if (user is null)
+            var user = await _userRepo.Register(model);
+            if (user == null)
             {
                 _response.StatusCode = HttpStatusCode.BadRequest;
                 _response.IsSuccess = false;
