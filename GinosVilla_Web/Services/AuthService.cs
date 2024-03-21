@@ -5,32 +5,34 @@ using GinosVilla_Web.Services.IServices;
 
 namespace GinosVilla_Web.Services
 {
-    public class AuthService :BaseService,  IAuthService
+    public class AuthService :  IAuthService
     {
-        private readonly IHttpClientFactory _httpClientFactory;
+        
         private string villaUrl;
-        public AuthService(IHttpClientFactory httpClientFactory, IConfiguration configuration):base(httpClientFactory) {
-            _httpClientFactory = httpClientFactory;
+        private readonly IBaseService _baseService;
+        public AuthService(IHttpClientFactory httpClientFactory, IConfiguration configuration, IBaseService baseService) 
+        {   
             villaUrl = configuration.GetValue<string>("ServiceUrls:VillaAPI");
+            _baseService = baseService;
         }
-        public Task<T> LoginAsync<T>(LoginRequestDTO loginRequestDTO )
+        public async Task<T> LoginAsync<T>(LoginRequestDTO loginRequestDTO )
         {
-            return SendAsync<T>(new APIRequest()
+            return await _baseService.SendAsync<T>(new APIRequest()
             {
                 ApiType = SD.ApiType.POST,
                 Data = loginRequestDTO,
                 Url = villaUrl + $"/api/{SD.CurrentAPIVerson}/UsersAuth/login"
-            });
+            }, withBearer: false);
         }
 
-        public Task<T> RegisterAsync<T>(RegistrationRequestDTO registrationRequestDTO)
+        public async Task<T> RegisterAsync<T>(RegistrationRequestDTO registrationRequestDTO)
         {
-            return SendAsync<T>(new APIRequest()
+            return await _baseService.SendAsync<T>(new APIRequest()
             {
                 ApiType = SD.ApiType.POST,
                 Data = registrationRequestDTO,
                 Url = villaUrl + $"/api/{SD.CurrentAPIVerson}/UsersAuth/register"
-            });
+            }, withBearer: false);
         }
     }
 }

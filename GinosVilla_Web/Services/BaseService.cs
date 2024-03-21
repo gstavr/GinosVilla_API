@@ -12,19 +12,21 @@ namespace GinosVilla_Web.Services
     public class BaseService : IBaseService
     {
         public APIResponse responseModel { get; set; }
-        public IHttpClientFactory httpClient { get; set; }
+        public IHttpClientFactory _httpClient { get; set; }
+        private readonly ITokenProvider _tokenProvider;   
 
-        public BaseService(IHttpClientFactory httpClient)
+        public BaseService(IHttpClientFactory httpClient, ITokenProvider tokenProvider)
         {
             this.responseModel = new();
-            this.httpClient = httpClient;
+            _httpClient = httpClient;
+            _tokenProvider = tokenProvider;
         }
 
-        public async Task<T> SendAsync<T>(APIRequest apiRequest)
+        public async Task<T> SendAsync<T>(APIRequest apiRequest, bool withBearer = true)
         {
             try
             {
-                var client = httpClient.CreateClient("GinosAPI");
+                var client = _httpClient.CreateClient("GinosAPI");
                 HttpRequestMessage message = new();
                 if (apiRequest.ContentType == ContentType.MultipartFormData)
                 {
@@ -37,6 +39,12 @@ namespace GinosVilla_Web.Services
 
                 //message.Headers.Add ("Content-Type", "application/json");
                 message.RequestUri = new Uri(apiRequest.Url);
+
+                if(withBearer && _tokenProvider.GetToken() is not null)
+                {
+                    var token = _tokenProvider.GetToken();
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
+                }
 
                 if (apiRequest.ContentType == ContentType.MultipartFormData)
                 {

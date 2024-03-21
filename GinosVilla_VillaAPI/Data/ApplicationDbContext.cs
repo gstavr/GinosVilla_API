@@ -20,6 +20,8 @@ namespace GinosVilla_VillaAPI.Data
         // Create the VillaNumbers
         public DbSet<VillaNumber> VillaNumbers { get; set; }
 
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // We have to override in order Identity to work
