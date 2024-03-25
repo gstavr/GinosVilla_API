@@ -34,5 +34,15 @@ namespace GinosVilla_Web.Services
                 Url = villaUrl + $"/api/{SD.CurrentAPIVerson}/UsersAuth/register"
             }, withBearer: false);
         }
+
+        public async Task<T> LogoutAsync<T>(TokenDTO tokenDTO)
+        {
+            return await _baseService.SendAsync<T>(new APIRequest()
+            {
+                ApiType = SD.ApiType.POST,
+                Data = tokenDTO,
+                Url = villaUrl + $"/api/{SD.CurrentAPIVerson}/UsersAuth/revoke"
+            });
+        }
     }
 }

@@ -115,8 +115,10 @@ namespace GinosVilla_Web.Controllers
         public async Task<IActionResult> Logout()
         {
             await HttpContext.SignOutAsync();
+            var token = _tokenProvider.GetToken();
+            await _authService.LogoutAsync<APIResponse>(token);
             _tokenProvider.ClearToken();
-            //HttpContext.Session.SetString(SD.AccessToken, "");
+            
 
             return RedirectToAction("Index", "Home");
         }

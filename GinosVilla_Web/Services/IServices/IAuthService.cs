@@ -6,5 +6,6 @@ namespace GinosVilla_Web.Services.IServices
     {
         Task<T> LoginAsync<T>(LoginRequestDTO loginRequestDTO);
         Task<T> RegisterAsync<T>(RegistrationRequestDTO registrationRequestDTO);
+        Task<T> LogoutAsync<T>(TokenDTO tokenDTO);
     }
 }

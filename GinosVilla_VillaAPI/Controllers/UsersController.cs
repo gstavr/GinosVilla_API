@@ -1,4 +1,5 @@
 ﻿using Asp.Versioning;
+using Azure;
 using GinosVilla_VillaAPI.Models;
 using GinosVilla_VillaAPI.Models.Dto;
 using GinosVilla_VillaAPI.Repository.IRepository;
@@ -20,6 +21,19 @@ namespace GinosVilla_VillaAPI.Controllers
             _userRepo = userRepo;
             _response = new();
         }
+
+        [HttpGet("error")]
+        public async Task<IActionResult> Error()
+        {
+            throw new FileNotFoundException();
+        }
+
+        [HttpGet("Imageerror")]
+        public async Task<IActionResult> ImageError()
+        {
+            throw new BadImageFormatException("Fake Image Exception");
+        }
+
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDTO model)
@@ -89,6 +103,23 @@ namespace GinosVilla_VillaAPI.Controllers
                 _response.Result = "Invalid Input";
                 return BadRequest(_response);
             }
+        }
+
+        [HttpPost("revoke")]
+        public async Task<IActionResult> RevokeRefreshToken([FromBody] TokenDTO tokenDTO)
+        {
+            
+            if (ModelState.IsValid)
+            {
+                await _userRepo.RevokeRefreshToken(tokenDTO);
+                _response.StatusCode = HttpStatusCode.OK;
+                _response.IsSuccess = true;
+                return Ok(_response);
+            }
+
+            _response.Result = "Invalid Input";
+            _response.IsSuccess = false;
+            return BadRequest(_response);
         }
     }
 }

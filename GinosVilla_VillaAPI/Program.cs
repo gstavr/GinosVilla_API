@@ -13,6 +13,13 @@ using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using GinosVilla_VillaAPI.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using GinosVilla_VillaAPI.Filters;
+using Microsoft.AspNetCore.Diagnostics;
+using Newtonsoft.Json;
+using System.Diagnostics;
+using GinosVilla_VillaAPI.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,12 +72,13 @@ builder.Services.AddAuthentication(x =>
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(key)),
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidIssuer = "https://magicvilla-api.com",
+            ValidAudience = "https://test-magic-api.com",
+            ClockSkew = TimeSpan.Zero,
         };
 });
-
-
 
 //Log.Logger = new LoggerConfiguration().MinimumLevel.Debug().WriteTo.File("log/villaLogs.txt", rollingInterval: RollingInterval.Day).CreateLogger();
 //builder.Host.UseSerilog(); // Define to use Serilog not the default logger
@@ -79,77 +87,27 @@ builder.Services.AddControllers(option =>
     {
         //option.CacheProfiles.Add("Default30", new CacheProfile() { Duration = 30}); // Add A Cache Profile in the programm
         //option.ReturnHttpNotAcceptable = true; // With this line we say what type of return we accept for is json and not XML example application/xml etc etc
+
+        // Add filter
+        option.Filters.Add<CustomExceptionFilter>();
     })
     .AddNewtonsoftJson()  // Add NewtonSoftJson for the PATCH API
-    .AddXmlDataContractSerializerFormatters(); // Add XML FORMATERS if we disable them as we do in line 8
+    .AddXmlDataContractSerializerFormatters() // Add XML FORMATERS if we disable them as we do in line 8
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.ClientErrorMapping[StatusCodes.Status500InternalServerError] = new ClientErrorData
+        {
+            Link = "https://ginos.com/500" // with this you customazie the status codes error with yours that is custom for your server
+        };
+    });
 
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
-    {
-        Description = 
-                    "JWT Authorization header using the Bearer scheme. \r\n\r\n" +
-                    "Enter the 'Bearer' [space] and then your token in the text input below. \r\n\r\n" +
-                    "Example: \"Bearer 1234asdfad\"",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Scheme = "Bearer"
-    });
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement()
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                },
-                Scheme = "oauth2",
-                Name =  "Bearer",
-                In = ParameterLocation.Header
-            },
-            new List<string>()
-        }
-    });
-    options.SwaggerDoc("v1", new OpenApiInfo()
-    {
-        Version = "v1.0",
-        Title = "Ginos Villa V1",
-        Description = "API to manage Ginos Villa",
-        TermsOfService = new Uri("https://example.com/terms"),
-        Contact = new OpenApiContact()
-        {
-            Name = "Ginos",
-            Url = new Uri("https://github.com/gstavr/GinosVilla_API")
-        },
-        License = new OpenApiLicense()
-        {
-            Name = "Example License",
-            Url = new Uri("https://example.com/terms"),
-        }
-    });
-    options.SwaggerDoc("v2", new OpenApiInfo()
-    {
-        Version = "v2.0",
-        Title = "Ginos Villa V2",
-        Description = "API to manage Ginos Villa",
-        TermsOfService = new Uri("https://example.com/terms"),
-        Contact = new OpenApiContact()
-        {
-            Name = "Ginos",
-            Url = new Uri("https://github.com/gstavr/GinosVilla_API")
-        },
-        License = new OpenApiLicense()
-        {
-            Name = "Example License",
-            Url = new Uri("https://example.com/terms"),
-        }
-    });
-});
+
+// Move Swagger Options to another file and add the options there
+builder.Services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
+builder.Services.AddSwaggerGen();
 
 // Add Custom Logger to DI
 //builder.Services.AddSingleton<ILogging, LoggingV2>();
@@ -157,17 +115,35 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+app.UseSwagger();
 if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
+{  
     app.UseSwaggerUI(options =>
     {   
         // Add Version 2 Document
         options.SwaggerEndpoint("/swagger/v2/swagger.json", "Ginos_VillaV2");
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "Ginos_VillaV1");
-
+        //options.RoutePrefix = "";
     });
 }
+else
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        // Add Version 2 Document
+        options.SwaggerEndpoint("/swagger/v2/swagger.json", "Ginos_VillaV2");
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Ginos_VillaV1");
+        options.RoutePrefix = "";
+    });
+}
+
+
+
+// app.UseExceptionHandler("/ErrorHandling/ProcessError");
+
+app.HandlerError(app.Environment.IsDevelopment()); // Move the logic in a file and extend the app.
+
 
 app.UseStaticFiles(); // Make wwwroot accessable
 
@@ -177,7 +153,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
+ApplyMigration(); // In order to apply migration Automatically create a function that does this not not by hand
 app.Run();
 
 
@@ -188,3 +164,15 @@ app.Run();
 // add-migration SeedVillaTable (but if we run something wrong
 // add-migration add-migration SeedVillaTableWithCreatedDate
 // and after // 2) update-database
+
+void ApplyMigration()
+{
+    using(var scope = app.Services.CreateScope())
+    {
+        var _db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        if (_db.Database.GetPendingMigrations().Any())
+        {
+            _db.Database.Migrate();
+        }
+    }
+}

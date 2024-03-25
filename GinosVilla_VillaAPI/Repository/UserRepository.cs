@@ -116,9 +116,12 @@ namespace GinosVilla_VillaAPI.Repository
                     new Claim(ClaimTypes.Name, user.UserName.ToString()),
                     new Claim(ClaimTypes.Role, roles.FirstOrDefault()),
                     new Claim(JwtRegisteredClaimNames.Jti, jwtTokenId),
-                    new Claim(JwtRegisteredClaimNames.Sub, user.Id)
+                    new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+                    new Claim(JwtRegisteredClaimNames.Aud, "ginos.com") // Add Audience for validation
                 }),
                 Expires = DateTime.UtcNow.AddMinutes(60),
+                Issuer = "https://magicvilla-api.com",
+                Audience = "https://test-magic-api.com",
                 SigningCredentials = new(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
@@ -140,36 +143,24 @@ namespace GinosVilla_VillaAPI.Repository
             }
 
             // Compare data with the database to validate and check if there is a missmatch
-            var accessTokenData = GetAccessTokenData(tokenDTO.AccessToken);
-            if(!accessTokenData.isSuccessful || accessTokenData.userId != existingRefreshToken.UserId
-                || accessTokenData.tokenID != existingRefreshToken.JwtTokenId)
+            var isTokenValid = GetAccessTokenData(tokenDTO.AccessToken, existingRefreshToken.UserId, existingRefreshToken.JwtTokenId);
+            if(!isTokenValid)
             {
-                existingRefreshToken.IsValid = false;
-                _db.SaveChanges();
+                await MarkTokenAsInvalid(existingRefreshToken);
                 return new TokenDTO();
 
             }
             // When someone tries to use not valid refresh token, fraud possible
             if (!existingRefreshToken.IsValid)
             {
-                var chainRecords = await _db.RefreshTokens
-                    .Where(x => x.UserId == existingRefreshToken.UserId && x.JwtTokenId == existingRefreshToken.JwtTokenId)
-                    .ExecuteUpdateAsync(x => x.SetProperty(refreshToken => refreshToken.IsValid, false));
-                //foreach (var chainRecord in chainRecords)
-                //{
-                //    chainRecord.IsValid = false;
-                //}
-                //_db.UpdateRange(chainRecords);
-                //_db.SaveChanges();
-                return new TokenDTO();
+                await MarkAllTokenChainAsInvalid(existingRefreshToken.UserId, existingRefreshToken.JwtTokenId);
             }
             
 
             // If just expired then makr as invalid and return empty
             if (existingRefreshToken.ExpiresAt < DateTime.UtcNow)
             {
-                existingRefreshToken.IsValid = false;
-                _db.SaveChanges();
+                await MarkTokenAsInvalid(existingRefreshToken);
                 return new TokenDTO();
             }
 
@@ -178,8 +169,7 @@ namespace GinosVilla_VillaAPI.Repository
             var newRefreshToken = await CreateNewRefreshToken(existingRefreshToken.UserId, existingRefreshToken.JwtTokenId);
 
             // revode existing refresh token
-            existingRefreshToken.IsValid = false;
-            _db.SaveChanges();
+            await MarkTokenAsInvalid(existingRefreshToken);
 
             // generatre new access token
 
@@ -196,9 +186,30 @@ namespace GinosVilla_VillaAPI.Repository
                 AccessToken = newAccessToken,
                 RefreshToken = newRefreshToken,
             };
-
-
         }
+
+        public async Task RevokeRefreshToken(TokenDTO tokenDTO)
+        {
+            var existingRefreshToken = await _db.RefreshTokens.FirstOrDefaultAsync(x => x.Refresh_Token == tokenDTO.RefreshToken);
+            if(existingRefreshToken is null)
+            {
+                return;
+            }
+
+            //Compare data from existing refresh and access token provided and 
+            // if there is any missmatch then we should do nothing with the refresh token
+
+            var isTokenValid = GetAccessTokenData(tokenDTO.AccessToken, existingRefreshToken.UserId, existingRefreshToken.JwtTokenId);
+            if (!isTokenValid)
+            {
+                await MarkTokenAsInvalid(existingRefreshToken);
+                return;
+            }
+
+            await MarkAllTokenChainAsInvalid(existingRefreshToken.UserId, existingRefreshToken.JwtTokenId);
+        }
+
+
         private async Task<string> CreateNewRefreshToken(string userId, string tokenId)
         {
             RefreshToken refreshToken = new()
@@ -216,7 +227,7 @@ namespace GinosVilla_VillaAPI.Repository
             return refreshToken.Refresh_Token;
         }
 
-        private (bool isSuccessful, string userId, string tokenID) GetAccessTokenData(string accessToken)
+        private bool GetAccessTokenData(string accessToken, string expectedUserId, string expectedTokenId)
         {
             try
             {
@@ -225,13 +236,29 @@ namespace GinosVilla_VillaAPI.Repository
                 var jwtTokenId = jwt.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Jti).Value;
                 var userId = jwt.Claims.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub).Value;
 
-                return (true, userId, jwtTokenId);
+                return userId ==  expectedUserId && jwtTokenId == expectedTokenId;
             }
             catch (Exception)
             {
 
-                return (false, null, null);
+                return false;
             }
         }
+
+        private async Task MarkAllTokenChainAsInvalid(string userId, string tokenId)
+        {
+            await _db.RefreshTokens
+                    .Where(x => x.UserId == userId && x.JwtTokenId == tokenId)
+                    .ExecuteUpdateAsync(x => x.SetProperty(refreshToken => refreshToken.IsValid, false));
+           
+        }
+
+        private Task MarkTokenAsInvalid(RefreshToken refreshToken)
+        {
+            refreshToken.IsValid = false;
+            return _db.SaveChangesAsync();
+        }
+
+       
     }
 }
